@@ -1,0 +1,441 @@
+---
+title: "BIOS 100 - Tutorial"
+author: "Your Name"
+date: "Fall 2024"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r packages}
+if (!require("tidyverse")) install.packages("tidyverse"); library("tidyverse") #install and load tidyverse
+if (!require("neonUtilities")) install.packages("neonUtilities"); library("neonUtilities") #used to download NEON data
+
+#used to interact with Observational Data (called OS), which is data collected by humans in the field
+#if (!require("neonOS")) install.packages("neonOS"); library("neonOS") 
+```
+
+# National Ecological Observatory Network (NEON)
+
+The National Science Foundation's National Ecological Observatory Network, [NEON](https://www.neonscience.org/), is a continental-scale observation facility designed to collect long-term open access ecological data to better understand how U.S. ecosystems are changing. Some data is collected at the scale of individual organisms, some data is collected by satellites and everything in between. 
+
+The United States was statistically divided into 20 domains based on ecological and climate information. Within the 20 domains, a total of 81 field sites were established, structured to include terrestrial and freshwater sites in each domain. Find more information at [About Field Sites and Domains](https://www.neonscience.org/field-sites/about-field-sites).
+
+For additional help getting started beyond this workbook see [Overview on Connecting](https://www.neonscience.org/resources/getting-started-neon-data-resources).
+
+# Data Portal: Konza and Mosquito Pathogen Status
+
+The data portal can be used to explore data, starting with [Explore Data by Location](https://www.neonscience.org/data#0) to view a map. I am going to examine the data being collected near Manhattan, Kansas, which is the closest NEON site to Lincoln, Nebraska.
+
+Mousing over each icon displays the shorthand name. The square mountain-looking icon labeled "KONZ" is the Konza Prairie Biological Station. 
+
+Note, if you zoom-in further on the map, the Konza icons will expand into a number of icons showing the locations of individual data collection locations. You can come back and explore this later. For now, zoom out until the icon for KONZ becomes visible. There are two other nearly overlapping icons for closely related data sets. Maneuver the map and mouse so that you can click on KONZ specifically. Clicking on the KONZ icon opens a pop-up window with some site details and links. Alternatively, the list below the map breaks out the details on each icon. You can click on the links in that table instead.
+
+Click on "Site Details" to see some images and a description of the site. Return to the map.
+
+Click on the "Explore Data" button.  
+
+Once you are exploring data from Konza, look at the bottom of the left-hand menu to select a Theme. Choose "Organisms, Populations, and Communities". You can scroll through and read about a wide number of data sets being collected.
+
+For this example, scroll to "Mosquito pathogen status". Note the summary graphic showing the years and months this data has been collected. While there is a lag in getting data processed and posted, this is real, recently collected data that biologists are using to address current research questions. You can click on the name of the data set to read about it. In this case, the data are presence/absence of diseases in a sample of mosquitoes. Sometimes is easier to fully understand the data after downloading it and looking at it.
+
+## Download data
+
+To download the data, copy the Product ID also known as the unique identifier. Include it in the loadByProduct() function. This particular data set was collected at multiple sites. To just download the data from Konza Prairie, set site equal to "KONZ". Keep check.size = F so that it doesn't ask us if we are sure about the downloading data.
+
+
+```{r}
+datalist = loadByProduct(dpID="DP1.10041.001", 
+                         site="KONZ",
+                         check.size = F) #this function is from the package neonUtilities
+```
+
+Know that we have downloaded the data, use names() to view all of the files that you just downloaded.
+
+```{r}
+names(datalist)
+```
+
+## Sort Through Data Files
+
+Which one to view? This is where it takes some reading of the description or product details. The description mentions mos_pathogenpooling and most_pathogenresults. Another clue is that these files don't have "10041" in their name, which is part of the product ID. The names of helper files, like the descriptions of the variables, contain the product ID. Helper files provide additional information and context but are not the data themselves. The fact that these two files do not have the number in the name, gives us information that these are the data files. 
+
+Take a look at Pathogen Pooling. We have to use $ and not the select() function like we practiced in Day 1 because datalist is a list of multiple data.frames and data.tables. 
+
+```{r}
+datalist$mos_pathogenpooling
+```
+
+The first field or coloumn is a unique identification number (uid). The next few fields lists KONZ or the domain repeatedly. The next field is startCollectData. That might be useful because it tells me when the data was collected. The column poolSize may also be interesting.
+
+Let's use one of the helper files Specifically, the variables table to get some additional information, filtering to mos_pathogenpooling
+
+```{r}
+datalist$variables_10041
+```
+
+### filter()
+
+If you scroll through the table you'll see that the field called "table" has entries for mos_pathogenresults, mos_pathogenqa, and mos_pathogenpooling. We'll use the  filter() function. Note the double equal sign, ==. That says that we don't want to assign a value, like happens with ->. Instead we want to know if they are equal to each other, or what is called an equality test. In this case, filter the data to show only those rows in which table is equal to "mos_pathogenpooling". You should notice that there are now fewer rows in the output.
+
+```{r}
+datalist$variables_10041 %>%
+  filter(table == "mos_pathogenpooling")
+```
+Click through the table, using the top arrows to move over columns, and you'll see that PoolSize is the number of mosquitoes in each sample.
+
+This still isn't the data on whether or not a disease was found. Let's look at the other table. 
+
+```{r}
+datalist$variables_10041 %>%
+  filter(table == "mos_pathogenresults") %>%
+  select(-table) #remove the name of the table so that is easier to read the other columns
+```
+
+Click through this table and look for something interesting. It appears that testResult and testPathogenName will tell about the diseases. Note that startCollectDate may give me useful time information.
+
+I'll use select() to reduce the set of fields to just those three.
+
+```{r}
+datalist$mos_pathogenresults %>%
+  select(testResult, testPathogenName, startCollectDate)
+```
+
+Let's use the function count() to see how many positive and negative tests were at Konza.
+
+```{r}
+datalist$mos_pathogenresults %>%
+  count(testResult) 
+```
+
+There were only a very small number of positives. Add testPathogenName to the count function to see which diseases tested positive. I'll also use gt() to make a little easier to view the table. The function gt() is way to format tables, similar to ggplot() but for tables.
+
+```{r}
+datalist$mos_pathogenresults %>%
+  count(testResult, testPathogenName) %>%
+  gt()
+```
+
+I see a positive test for Flavivirus and West Nile.
+
+## Forming an Hypothesis
+
+Accessing data is only part of biology research. I need to ask a question in order to find an answer. Ideally, that question is informed by our understanding of biology so that the answer is useful. In other words, I'd like to develop an hypothesis. An hypothesis is an informed expectation of how biology works, that I can confront with data. If the data supports or refutes the hypothesis, I'll learn more about how the world works. As one becomes a more experienced biologist, you'll be able to draw on your knowledge of past research and theory to craft an informed hypothesis. For all biologists, part of that process includes reading the peer-reviewed literature, i.e. scientific papers, to understand what we have discovered in the past.
+
+Appreciating that you may not consider yourself an expert on diseases transmitted by mosquitoes, you may already have some information by which you can form an hypothesis. At the very list, it will be a question and hypothesis interesting to you.
+
+I am going to draw on my knowledge of climate change, to ask the question of whether mosquito diseases are increasing over time. Given what I understand about climate change becoming more prevalent and that I once read a paper suggesting that a warmer climate may lead to more diseases [Hall et al 2006](https://esajournals.onlinelibrary.wiley.com/doi/full/10.1890/0012-9658%282006%2987%5B1684%3AWDNHTM%5D2.0.CO%3B2). I'm going to hypothesize that the incidence of mosquito diseases will increase over time. Granted, there may be other things that have increased over time besides a warming climate. Therefore this data won't be definitive, but it will provide some evidence to either further support this hypothesis I just created or evidence to counter it. At the same time, perhaps my data will be inconclusive.
+
+First, let's reformulate my data to ask this question with the Konza Prairie data.
+
+Look back to the code above. I'll use this same format to set up ggplot. I can copy/paste/modify the code or write it out line by line. 
+
+```{r}
+datalist$mos_pathogenresults %>%
+  ggplot(aes(x=startCollectDate, y=testResult)) +
+  geom_line() +
+  theme_classic()
+```
+
+I started with geom_line(), which just plotted a straight line. So I switched to geom_point() which creates a scatter plot. 
+
+```{r}
+datalist$mos_pathogenresults %>%
+  ggplot(aes(x=startCollectDate, y=testResult)) +
+  geom_point() +
+  theme_classic()
+```
+
+There appears to be be a single data point indicating positive. However, I know above that we found two positive tests in the data. I am going to do two things to help visualize the data. One, I'm going to use open circles by specifiying shape = 1 in geom_point(). With open circles it is easier to view overlapping data points. Second, I'm going to add position = "jitter" to geom_point. Jitter adds or subtracts a random point to each point, which spreads out overlapping points. With jitter, you have to keep in mind that the points are plotted not at their exact point, but in a cloud near their position.
+
+```{r}
+datalist$mos_pathogenresults %>%
+  ggplot(aes(x=startCollectDate, y=testResult)) +
+  geom_point(shape=1, position = "jitter") + #added shape = 1 for open circles and jitter to spread out points.
+  theme_classic()
+```
+
+If you are thinking, didn't we learn geom_jitter last time, good memory! Below is code using geom_jitter, which gives the same result. Many times in coding, there are multiple solutions to the same end.
+
+```{r}
+datalist$mos_pathogenresults %>%
+  ggplot(aes(x=startCollectDate, y=testResult)) +
+  geom_jitter(shape=1) + #added shape = 1 for open circles and jitter to spread out points.
+  theme_classic()
+```
+
+
+Now we can see the two positives.
+
+On one hand, this data suggests there has been no chance in diseases, or perhaps a decrease. However, if diseases are rare, which they appear to be, it might take more data to show any patterns. That could mean more data over time or more data across more sites. I've already used all the time points in the data set, but I could expand to more sites. In this case, let's look at all of the sites in NEON.
+
+By removing site, it will download data from all sites. This may take some time because that is a lot of data to download. In my case, I received a multuple messages that it needed to pause for 99 seconds between downloads. So be patient. If you are going to do a project with NEON data, you can [sign up for a free token](https://data.neonscience.org/data-api/rate-limiting/) to increase your rate. The token is included in your loadByProduct() call as loadByProduct(...,token = "")
+
+Create an account at [My Account](https://data.neonscience.org/myaccount) by either connecting with an existing Google account or clicking "Sign Up" in on the upper right of the dialogue box to create an account. After creating the account and saving changes, at the bottom of the page under API Tokens, click "Send Verification Email". After clicking through the verification on your email, return to the page and refresh. At the bottom, click on "GET API TOKEN". There will still be rate limits, but it will more favorable for you.
+
+```{r}
+#I've commented out the next line because it takes a long time to execute and I have a better option below.
+
+# datalistw = loadByProduct(dpID="DP1.10041.001", check.size = F)
+```
+
+```{r}
+# source("NEONToken.R") #I'm using this code to load a token I've saved personally on my account. You can ignore
+
+# You'll want to 
+datalist = loadByProduct(dpID="DP1.10041.001", 
+                         check.size = F, token = myToken) #replace myToken with a your token in quotes, for example token = "XSERsdfSEF"
+```
+
+I can save the data on my computer so that I don't have to download it again. Un-comment and execute either line to save or load the data to/from your computer, in which case you can skip the above slow step of downloading the data from the NEON server.
+```{r}
+# saveRDS(datalist,file="NEONdatalist") #save the data locally
+# readRDS(file="NEONdatalist") #load local data
+```
+
+
+I can now plot all sites across the entire United States using the same code.
+
+```{r}
+datalist$mos_pathogenresults %>%
+  ggplot(aes(x=startCollectDate, y=testResult)) +
+  geom_point(shape=1, position = "jitter") +
+  theme_classic()
+```
+
+Let's remove inconclusive data by add a filter() line and the != operator, which means "not equal to". I've added a comment to remind me later what that line does.
+```{r}
+datalist$mos_pathogenresults %>%
+  filter(testResult != "Inconclusive") %>% #remove Inconclusive test results.
+  ggplot(aes(x=startCollectDate, y=testResult)) +
+  geom_point(shape=1, position = "jitter") +
+  theme_classic()
+```
+Now there are a lot more positive tests. At first glance, it doesn't look like there has been an increase over the time period of the data. Although it is hard to tell because there is so much data and positive tests are still rare.
+
+Instead of a scatter plot showing all of the data, let's try a table that will give me better perspective on the rate of positive tests. Let's start with a rate. First, I'll copy/paste the top two lines. 
+
+Second, I'll use mutate() to add a new field to the data called yearCollect. The function year() will extract the year from startCollectDate. Here is an example, selecting just those two columsn so that we can look at the data
+
+```{r}
+datalist$mos_pathogenresults %>%
+  filter(testResult != "Inconclusive") %>%
+  mutate(yearCollect = year(startCollectDate)) %>% #extract the year
+  select(startCollectDate, yearCollect)
+```
+
+```{r}
+datalist$mos_pathogenresults %>%
+  filter(testResult != "Inconclusive") %>%
+  mutate(yearCollect = year(startCollectDate)) %>%
+  group_by(yearCollect) %>%
+  summarize(positive = sum(testResult == "Positive"), all = n(), rate = positive/all )
+```
+```{r}
+datalist$mos_pathogenresults %>%
+  filter(testResult != "Inconclusive") %>%
+  mutate(yearCollect = year(startCollectDate)) %>%
+  group_by(yearCollect) %>%
+  summarize(positive = sum(testResult == "Positive"), all = n(), rate = positive/all ) %>%
+  ggplot(aes(x = yearCollect, y = rate)) +
+  theme_classic()+
+  geom_point()
+```
+There is a much higher rate of disease the first year. However, looking up at the data table, there were far fewer samples that year. I'm guessing there were still setting up sites and establishign protocols. One could look into those details, but for now let's remove the first two years of data. I'll do that by adding a filter 
+
+```{r}
+datalist$mos_pathogenresults %>%
+  filter(testResult != "Inconclusive") %>%
+  mutate(yearCollect = year(startCollectDate)) %>%
+  filter(yearCollect >= 2016) %>% #filter to remove the first two years in which we had too few data points
+  group_by(yearCollect) %>%
+  summarize(positive = sum(testResult == "Positive"), all = n(), rate = positive/all ) %>%
+  ggplot(aes(x = yearCollect, y = rate)) +
+  theme_classic()+
+  geom_point() 
+```
+
+Honestly, I didn't expect to see such a dramatic pattern when I started down this path! There appears to be a strong increase in disease incidence from 2016 to 2022. It would still be valuable to explore the data to see if there were other changes in collection protocol that might explain this increase. For example, looking at the top table, there was a dramatic decrease in the number of samples in 2020, which is likely explained by COVID reducing the amount of data that researchers were able to collect. The sample numbers went down and back up, which is not consistent with a pattern of generally increasing disease incidence. I'd be interested in checking to see if the locations being samples stayed relatively constant across 2016 to 2022. 
+
+For now, I am going to stop with analysis and dress up my plot a bit. Let's move to open circles, becuase I generally like them as a default, and let's increase the size of the points so that more ink is used representing the data. I'll also put in better axes labels.
+
+```{r}
+datalist$mos_pathogenresults %>%
+  filter(testResult != "Inconclusive") %>%
+  mutate(yearCollect = year(startCollectDate)) %>%
+  filter(yearCollect >= 2016) %>%
+  group_by(yearCollect) %>%
+  summarize(positive = sum(testResult == "Positive"), all = n(), rate = positive/all ) %>%
+  ggplot(aes(x = yearCollect, y = rate)) +
+  theme_classic()+
+  geom_point(shape = 1, size = 5) + 
+  ylim(0,NA) +
+  xlab("Year") + 
+  ylab("Fraction Positive for Disease")
+```
+
+
+One can right-click on the above image to save it as a separate file.
+
+Based on this analysis, I have evidence that disease incidence in mosquitoes is increasing. That is consistent with my hypothesis that climate change is leading to more disease. However, other things have changed over that same time span. I coudl do additional data analysis from other data sets to explore, for example, how this relates to any changes in average temperatures, rainfall, other weather patterns, or other ecosystem features. It would also be valuable, and help explain the above pattern, to explore difference by site. Are there one or more NEON sites that is driving this pattern. It is not atypical that data analysis to answer a questions opens more questions.
+
+Had I found a flat relationship, I would have concluded that disease incidence in mosquitoes was not increasing. This is called accepting the null hypothesis. Instead, we rejected the null hypothesis and accepted an alternative hypothesis that disease was increasing. Either result would be interesting as long as I have an interesting question, reliable data positioned to address that question, and well formulated hypothesis. A well reasoned hypothesis allows me to abstract from a simple observation to a broader pattern grounded in what we know about biology and positioned to help us expand what we now know about biology. That is biology research.
+
+#Your challenge
+
+- Choose a data set from those described here, or find another data set.
+- Explore the data
+- Develop a question and a hypotheses. Describe the rational for your expected result.
+- Wrangle data into format that provides insight into your hypothesis
+- Document this in an R Markdown file and submit it via Canvas
+
+We'll have some intermediate steps to help you overcome coding hurdles--which happen to everyone. Seek feedback and assistance from friends in the class. However, in the end, ask your own question and seek your own answer. Engaging in this project will help you gain experience in a data science tool and help you discover what excites you about biology.
+
+Looking back 
+
+
+## Disease
+
+
+
+
+```{r}
+datalist$mos_pathogenresults %>%
+  ggplot(aes(x=startCollectDate, y=testResult, color = siteID)) +
+  geom_point(shape=1, position = "jitter") + #added shape = 1 for open circles and jitter to spread out points.
+  theme_classic()
+```
+
+
+```{r}
+#used to download tidyverse
+if (!require(tidyverse)) install.packages('tidyverse')
+library(tidyverse)
+
+
+#used to download gt
+if (!require(gt)) install.packages('gt')
+library(gt)
+```
+
+The variablss has information on all of the variables
+Opens a separate tab to view
+```{r}
+parlist$variables_00024 %>%
+  filter(table == "PARPAR_30min") %>%
+  view()
+```
+
+I don't need readTableNEON, but 
+
+```{r}
+par30 <- readTableNEON(
+  dataFile= parlist$PARPAR_30min, 
+  varFile= parlist$variables_00024)
+```
+
+
+
+```{r}
+apchem <- loadByProduct(dpID="DP1.20063.001", 
+                  site=c("PRLA","SUGG","TOOK"), 
+                  package="expanded", check.size=T)
+```
+
+```{r}
+names(apchem)
+```
+
+
+The above example was modified from this tutorial [Download and Explore NEON Data](https://www.neonscience.org/resources/learning-hub/tutorials/download-explore-neon-data). The tutorial includes additional information on how to save data locally, how to access remote sensing data (called AOP), and 
+
+
+
+[NEON Utilities Cheat Sheet](https://www.neonscience.org/sites/default/files/cheat-sheet-neonUtilities.pdf)
+
+```{r}
+stackByTable()
+```
+
+# Old
+
+#Other Data Sources
+
+## Breeding Bird Survey
+
+
+https://cran.r-project.org/web/packages/rdataretriever/vignettes/breed-bird-survey-analysis.html
+
+https://rpubs.com/clanescher/processingBBSdata
+
+## Other Old
+
+
+```{r}
+datalist <- loadByProduct(dpID="DP1.00024.001", 
+                         site="WREF", 
+                         startdate="2019-09",
+                         enddate="2019-11", check.size=F)
+```
+This shows the names of all of the data tables that were loaded.
+
+```{r}
+names(datalist)
+```
+Use the dollar sign to reference each data set inside the list
+```{r}
+datalist$PARPAR_30min
+```
+
+Optional but useful, you can rename a given table with a shorter name so that you can more easily reference it in your code.
+```{r}
+par30 <- datalist$PARPAR_30min 
+```
+
+
+
+```{r}
+par30 %>%
+  filter() %>%
+  ggplot(aes(x = startDateTime, y = PARMean))
+```
+The above code lays out the edges of the plot, but doesn't show any data. To display the data, you have to tell ggplot what kind of graph you want to display. In this case, we'll display a **line plot**.
+
+The function ggplot() has a number of modifying functions which are added using the plus sign (+) instead of the pipe (%>%). Otherwise it is similar. Just remember, once you move to ggplot at the end of your code, to use + instead of %>%.
+
+```{r}
+par30 %>%
+  filter() %>%
+  ggplot(aes(x = startDateTime, y = PARMean)) +
+  geom_line()
+```
+
+
+Adding theme_classic() will produce a cleaner looking figure.
+
+```{r}
+ggplot(aes(x = startDateTime, y = PARMean), data = par30) +
+  geom_line() +
+  theme_classic()
+```
+
+The table that begins with variables has more information on each of the variables, include a description and units. I have to use filter to select the same table I've been plotting, and then a second filter to select the variables in which I'm interested. In this case, I use %in% and c() to filter to a set of possible names, specifically the variables I'm using above.
+
+```{r}
+parlist$variables_00024 %>%
+  filter(table=="PARPAR_30min") %>%
+  filter(fieldName %in% c("PARMean","startDateTime"))
+```
+
+Reading the descriptions, I am going to give my axes titles names that can be more easily interpretted by a reader of the figure. The ggplot functions xlab() and ylab() allow me to change the labels of the x and y axis respectively. 
+
+```{r}
+ggplot(aes(x = startDateTime, y = PARMean), data = par30) +
+  geom_line() +
+  theme_classic() +
+  xlab("Sample Time") +
+  ylab("Photosynthetically Active Radiation")
+```
+
