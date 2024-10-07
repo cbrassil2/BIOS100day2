@@ -112,6 +112,10 @@ datalist$mos_pathogenresults %>%
 There were only a very small number of positives. Add testPathogenName to the count function to see which diseases tested positive. I'll also use gt() to make a little easier to view the table. The function gt() is way to format tables, similar to ggplot() but for tables.
 
 ```{r}
+if (!require("gt")) install.packages("gt"); library("gt")
+```
+
+```{r}
 datalist$mos_pathogenresults %>%
   count(testResult, testPathogenName) %>%
   gt()
