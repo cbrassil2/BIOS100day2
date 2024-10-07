@@ -1,6 +1,6 @@
 ---
 title: "BIOS 100 - Day 2"
-author: "Your Name"
+author: "Chad Brassil"
 date: "Fall 2024"
 output: html_document
 ---
