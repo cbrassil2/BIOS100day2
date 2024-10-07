@@ -1,0 +1,85 @@
+---
+title: "BIOS 100 - Your Project"
+author: "Your Name"
+date: "Fall 2024"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r packages}
+if (!require("tidyverse")) install.packages("tidyverse"); library("tidyverse") #install and load tidyverse
+if (!require("neonUtilities")) install.packages("neonUtilities"); library("neonUtilities") #used to download NEON data
+```
+
+# Choose NEON Data
+
+
+Use [Explore Data by Location](https://www.neonscience.org/data#0) to start with a map-based view of of sites.
+
+Or use [Explore Data Products](https://data.neonscience.org/data-products/explore) to start with the kind of data that is available. On the left-hand side Filter, I recommend you stick with the Theme "Organisms, Populations, and Communities", because you've learned the tools to work with that kind of data.
+
+Below, type a few sentences on what data you plan on using. Include information on which sites and information which data sets. It may also be appropriate to include information on which year(s) you are examining.
+
+## 1) WHAT DATA DO YOU PLAN ON USING?
+
+
+
+
+# Explore the data to understand it
+
+Load your data. You may need to load multiple products and store them in different datalist variables.
+
+## 2) COMPLETE THE CODE CHUNK BELOW
+
+```{r}
+datalist = loadByProduct(dpID="", site="", check.size = F)
+
+#datalist2 = loadByProduct(dpID="", site="", check.size = F)
+```
+
+If it takes a long time to load your data, you will want to save a copy in your account. Below is the code to do that. You'll need to un-comment and comment code as needed. 
+
+```{r}
+# saveRDS(datalist,file="NEONdatalistYours") #save the data locally
+# datalist <- readRDS(file="NEONdatalistYours") #load local data
+```
+
+
+```{r}
+names(datalist)
+```
+
+
+From the list of files downloaded, determine which file as the data you want to look at. Replace the xxx in the code chunk below with the name of the file you will be using. If it is multiple files, include lines of code for each file.
+
+## 3) COMPLETE THE CODE CHUNK BELOW
+
+```{r}
+datalist$xxx
+```
+
+
+Remember that you can examine the description of variables to help understand what field contain the data in which you are interested.
+
+```{r}
+datalist$variables_xxxx %>%
+  filter(table == "")
+```
+
+# Develop a question and a hypotheses
+
+What question are you asking about that data?
+
+## 4) WHAT IS YOUR QUESTION?
+
+
+
+A hypothesis is an informed expectation based on what you know about the system. 
+
+## 5) WHAT IS YOUR HYPOTHESIS
+
+
+
