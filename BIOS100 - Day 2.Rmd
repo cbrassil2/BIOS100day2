@@ -1,5 +1,5 @@
 ---
-title: "BIOS 100 - Tutorial"
+title: "BIOS 100 - Day 2"
 author: "Your Name"
 date: "Fall 2024"
 output: html_document
@@ -47,9 +47,7 @@ To download the data, copy the Product ID also known as the unique identifier. I
 
 
 ```{r}
-datalist = loadByProduct(dpID="DP1.10041.001", 
-                         site="KONZ",
-                         check.size = F) #this function is from the package neonUtilities
+datalist = loadByProduct(dpID="DP1.10041.001", site="KONZ", check.size = F) #this function is from the package neonUtilities
 ```
 
 Know that we have downloaded the data, use names() to view all of the files that you just downloaded.
@@ -68,7 +66,7 @@ Take a look at Pathogen Pooling. We have to use $ and not the select() function 
 datalist$mos_pathogenpooling
 ```
 
-The first field or coloumn is a unique identification number (uid). The next few fields lists KONZ or the domain repeatedly. The next field is startCollectData. That might be useful because it tells me when the data was collected. The column poolSize may also be interesting.
+The first field or column is a unique identification number (uid). The next few fields lists KONZ or the domain repeatedly. The next field is startCollectData. That might be useful because it tells me when the data was collected. The column poolSize may also be interesting.
 
 Let's use one of the helper files Specifically, the variables table to get some additional information, filtering to mos_pathogenpooling
 
@@ -84,6 +82,7 @@ If you scroll through the table you'll see that the field called "table" has ent
 datalist$variables_10041 %>%
   filter(table == "mos_pathogenpooling")
 ```
+
 Click through the table, using the top arrows to move over columns, and you'll see that PoolSize is the number of mosquitoes in each sample.
 
 This still isn't the data on whether or not a disease was found. Let's look at the other table. 
@@ -176,27 +175,30 @@ By removing site, it will download data from all sites. This may take some time 
 Create an account at [My Account](https://data.neonscience.org/myaccount) by either connecting with an existing Google account or clicking "Sign Up" in on the upper right of the dialogue box to create an account. After creating the account and saving changes, at the bottom of the page under API Tokens, click "Send Verification Email". After clicking through the verification on your email, return to the page and refresh. At the bottom, click on "GET API TOKEN". There will still be rate limits, but it will more favorable for you.
 
 ```{r}
-#I've commented out the next line because it takes a long time to execute and I have a better option below.
+#I've commented out the next line because it takes a really long time to execute and I have a better option below.
 
 # datalistw = loadByProduct(dpID="DP1.10041.001", check.size = F)
 ```
 
 ```{r}
-# source("NEONToken.R") #I'm using this code to load a token I've saved personally on my account. You can ignore
+# source("NEONToken.R") #I'm using this code to load a token I've saved personally on my account. You can ignore this line and replace myToken with your token information directly--since you won't be sharing your code with the whole world like I am.
 
-# You'll want to 
-datalist = loadByProduct(dpID="DP1.10041.001", 
-                         check.size = F, token = myToken) #replace myToken with a your token in quotes, for example token = "XSERsdfSEF"
+# You'll want to replace myToken with your personal token. Then un-comment to execute. This will still take multiple minutes, as much as 5 to 30 minutes, so be prepared to wait.
+
+# datalist = loadByProduct(dpID="DP1.10041.001", check.size = F, token = myToken) #replace myToken with a your token in quotes, for example token = "XSERsdfSEF"
 ```
 
 I can save the data on my computer so that I don't have to download it again. Un-comment and execute either line to save or load the data to/from your computer, in which case you can skip the above slow step of downloading the data from the NEON server.
+
+To speed us up for class, I've included NEONdatalist in the GitHub based on the above dpID="DP1.10041.001". So you can run the readRDS() function below.
+
 ```{r}
 # saveRDS(datalist,file="NEONdatalist") #save the data locally
-# readRDS(file="NEONdatalist") #load local data
+datalist <- readRDS(file="NEONdatalist") #load local data
 ```
 
 
-I can now plot all sites across the entire United States using the same code.
+I can now plot all sites across the entire United States using the same code as above.
 
 ```{r}
 datalist$mos_pathogenresults %>%
@@ -206,6 +208,7 @@ datalist$mos_pathogenresults %>%
 ```
 
 Let's remove inconclusive data by add a filter() line and the != operator, which means "not equal to". I've added a comment to remind me later what that line does.
+
 ```{r}
 datalist$mos_pathogenresults %>%
   filter(testResult != "Inconclusive") %>% #remove Inconclusive test results.
@@ -213,11 +216,14 @@ datalist$mos_pathogenresults %>%
   geom_point(shape=1, position = "jitter") +
   theme_classic()
 ```
+
 Now there are a lot more positive tests. At first glance, it doesn't look like there has been an increase over the time period of the data. Although it is hard to tell because there is so much data and positive tests are still rare.
 
-Instead of a scatter plot showing all of the data, let's try a table that will give me better perspective on the rate of positive tests. Let's start with a rate. First, I'll copy/paste the top two lines. 
+Instead of a scatter plot showing all of the data, let's try a table that will give me better perspective on the rate of positive tests. Let's start with a rate per year. 
 
-Second, I'll use mutate() to add a new field to the data called yearCollect. The function year() will extract the year from startCollectDate. Here is an example, selecting just those two columsn so that we can look at the data
+First, I'll copy/paste the top two lines. 
+
+Second, I'll use mutate() to add a new field to the data called yearCollect. The function year() will extract the year from startCollectDate. Here is an example, selecting just those two columns so that we can look at the data
 
 ```{r}
 datalist$mos_pathogenresults %>%
@@ -226,6 +232,8 @@ datalist$mos_pathogenresults %>%
   select(startCollectDate, yearCollect)
 ```
 
+Now we will use a combination of group_by() and summarize(), two functions you learned about in the previous day, to calculate the rate of positive tests per year.
+
 ```{r}
 datalist$mos_pathogenresults %>%
   filter(testResult != "Inconclusive") %>%
@@ -233,6 +241,10 @@ datalist$mos_pathogenresults %>%
   group_by(yearCollect) %>%
   summarize(positive = sum(testResult == "Positive"), all = n(), rate = positive/all )
 ```
+
+
+That is in table form. Add the ggplot lines, which you've seen before, to turn this into a figure.
+
 ```{r}
 datalist$mos_pathogenresults %>%
   filter(testResult != "Inconclusive") %>%
@@ -243,7 +255,8 @@ datalist$mos_pathogenresults %>%
   theme_classic()+
   geom_point()
 ```
-There is a much higher rate of disease the first year. However, looking up at the data table, there were far fewer samples that year. I'm guessing there were still setting up sites and establishign protocols. One could look into those details, but for now let's remove the first two years of data. I'll do that by adding a filter 
+
+There is a much higher rate of disease the first year. However, looking up at the data table, there were far fewer samples that year. I'm guessing there were still setting up sites and establishing protocols. One could look into those details, but for now let's remove the first two years of data. I'll do that by adding a filter 
 
 ```{r}
 datalist$mos_pathogenresults %>%
@@ -257,9 +270,9 @@ datalist$mos_pathogenresults %>%
   geom_point() 
 ```
 
-Honestly, I didn't expect to see such a dramatic pattern when I started down this path! There appears to be a strong increase in disease incidence from 2016 to 2022. It would still be valuable to explore the data to see if there were other changes in collection protocol that might explain this increase. For example, looking at the top table, there was a dramatic decrease in the number of samples in 2020, which is likely explained by COVID reducing the amount of data that researchers were able to collect. The sample numbers went down and back up, which is not consistent with a pattern of generally increasing disease incidence. I'd be interested in checking to see if the locations being samples stayed relatively constant across 2016 to 2022. 
+Honestly, I didn't expect to see such a dramatic pattern when I started this analysis of mosquito transmitted disease! There appears to be a strong increase in disease incidence from 2016 to 2022. It would still be valuable to explore the data to see if there were other changes in collection protocol that might explain this increase. For example, looking at the top table, there was a dramatic decrease in the number of samples in 2020, which is likely explained by COVID reducing the amount of data that researchers were able to collect. The sample numbers went down and back up, which is not consistent with a pattern of generally increasing disease incidence. I'd be interested in checking to see if the locations being samples stayed relatively constant across 2016 to 2022. 
 
-For now, I am going to stop with analysis and dress up my plot a bit. Let's move to open circles, becuase I generally like them as a default, and let's increase the size of the points so that more ink is used representing the data. I'll also put in better axes labels.
+For now, I am going to stop with analysis and dress up my plot a bit. Let's move to open circles because I generally like them as a default, and let's increase the size of the points so that more ink is used representing the data. I'll also put in better axes labels.
 
 ```{r}
 datalist$mos_pathogenresults %>%
@@ -277,165 +290,80 @@ datalist$mos_pathogenresults %>%
 ```
 
 
-One can right-click on the above image to save it as a separate file.
+Based on this analysis, I have evidence that disease incidence in mosquitoes is increasing. That is consistent with my hypothesis that climate change is leading to more disease. However, other things have changed over that same time span. I could do additional data analysis from other data sets to explore, for example, how this relates to any changes in average temperatures, rainfall, other weather patterns, or other ecosystem features. It would also be valuable, and help explain the above pattern, to explore difference by site. Are there one or more NEON sites that is driving this pattern. It is not atypical that data analysis to answer a questions opens more questions.
 
-Based on this analysis, I have evidence that disease incidence in mosquitoes is increasing. That is consistent with my hypothesis that climate change is leading to more disease. However, other things have changed over that same time span. I coudl do additional data analysis from other data sets to explore, for example, how this relates to any changes in average temperatures, rainfall, other weather patterns, or other ecosystem features. It would also be valuable, and help explain the above pattern, to explore difference by site. Are there one or more NEON sites that is driving this pattern. It is not atypical that data analysis to answer a questions opens more questions.
+Had I found a flat relationship, I would have concluded that disease incidence in mosquitoes was not increasing. This is called accepting the null hypothesis. Instead, we rejected the null hypothesis and accepted an alternative hypothesis that disease was increasing. Either result would be interesting as long as I have an interesting question, reliable data positioned to address that question, and well formulated hypothesis. A well-reasoned hypothesis allows me to abstract from a simple observation to a broader pattern grounded in what we know about biology and positioned to help us expand what we now know about biology. That is biology research.
 
-Had I found a flat relationship, I would have concluded that disease incidence in mosquitoes was not increasing. This is called accepting the null hypothesis. Instead, we rejected the null hypothesis and accepted an alternative hypothesis that disease was increasing. Either result would be interesting as long as I have an interesting question, reliable data positioned to address that question, and well formulated hypothesis. A well reasoned hypothesis allows me to abstract from a simple observation to a broader pattern grounded in what we know about biology and positioned to help us expand what we now know about biology. That is biology research.
+# Other kinds of figures
 
-#Your challenge
+During our next class period, we'll talk about two other kinds of figures you might use 
 
-- Choose a data set from those described here, or find another data set.
-- Explore the data
+## Bar Plot of Two Variables
+
+When one variable is a continuous number and one is discrete, a bar plot can be used. You saw this in the previous class period. Here is the abundance of fish by species in 2016 at the Prairie Pothole NEON location in North Dakota. We'll step through the creation of this graph in detail during the next class period. I include it here so that you keep in mind that this kind of figure can be plotted.
+
+```{r, message=FALSE}
+datalist_fish = loadByProduct(dpID="DP1.20107.001", site="PRPO", tabl = "fsh_bulkCount",check.size = F)
+
+datalist_fish$fsh_bulkCount %>%
+  select(namedLocation, passStartTime, passNumber, eventID, taxonID, scientificName, bulkFishCount ) %>% #relevant fields
+  filter(year(passStartTime) == 2016) %>% #limit to a single year
+  group_by(scientificName) %>% #count per species
+  summarize(count = sum(bulkFishCount)) %>% #add up the numbers
+  ggplot(aes(x=scientificName, y=count)) + #choose what to plot
+    geom_bar(stat="identity") + #make a bar plot
+    theme_classic() #remove gridlines
+```
+
+
+## Scatter Plot of Two Variables
+
+This is similar to a time series except we are plotting two related biological variables instead of time. A scatter plot is required when both variables are continuous numbers. In this case, plant diversity and bird diversity are collected at the same plots, which makes them comparable. Creating this figure is slightly more complicated than what we've done today because we have to pull data from two different Product ID datasets and then match them up based on a common location, either a site or plot. We'll walk through this code step by step next time, but I'm including it all hear because I want you to be aware that it is possible to do this and to produce this kind of figure.
+
+```{r, message=FALSE}
+
+datalist_PlantPresence = loadByProduct(dpID="DP1.10058.001", site="RMNP", tabl="div_1m2Data", check.size = F)
+
+datalist_PlantPresence$div_1m2Data %>%
+  filter(divDataType == "plantSpecies", year(endDate) == 2022) %>% #limit to plants, not lichens, rocks etc and just 2022
+  select(plotID, taxonID) %>%
+  distinct() %>%
+  group_by(plotID) %>%
+  summarise(plant_richness = n()) -> PlantDiversity
+
+datalist_BreedingLandbird = loadByProduct(dpID="DP1.10003.001", site="RMNP",  tabl="brd_countdata", check.size = F)
+
+datalist_BreedingLandbird$brd_countdata %>%
+  filter(targetTaxaPresent == "Y") %>%
+  filter(year(startDate) == 2022) %>%
+  select(plotID, taxonID) %>%
+  distinct() %>%
+  group_by(plotID) %>%
+  count() %>%
+  rename(bird_richness = n) -> BirdDiversity
+
+PlantDiversity %>%
+  left_join(BirdDiversity, by = c("plotID")) %>% #join those with the same plotID
+  filter(!is.na(bird_richness)) %>% #remove those with NA in bird_richness
+  ggplot(aes(x = plant_richness, y = bird_richness)) +
+    geom_point(shape = 1, size = 3) +
+    theme_classic() +
+    xlab ("Plant Species Richness") +
+    ylab ("Bird Species Richness")
+```
+
+#Your Challenge
+
+Across the next three class periods, you will do the following:
+
+- Choose a NEON data set.
+- Explore the data to understand it.
 - Develop a question and a hypotheses. Describe the rational for your expected result.
-- Wrangle data into format that provides insight into your hypothesis
+- Create a figure that provides insights into your hypothesis.
+- In writing, summarize the relationship between your figure and your hypothesis.
+- Find at least one peer-reviewed article related to your hypotheses and include a link in your RMarkdown Report. 
+  a) Search [Google Scholar](https://scholar.google.com/), which focuses on peer-reviewed literature
+  b) Bonus if, in writing, you can related the article to what you found.
 - Document this in an R Markdown file and submit it via Canvas
 
 We'll have some intermediate steps to help you overcome coding hurdles--which happen to everyone. Seek feedback and assistance from friends in the class. However, in the end, ask your own question and seek your own answer. Engaging in this project will help you gain experience in a data science tool and help you discover what excites you about biology.
-
-Looking back 
-
-
-## Disease
-
-
-
-
-```{r}
-datalist$mos_pathogenresults %>%
-  ggplot(aes(x=startCollectDate, y=testResult, color = siteID)) +
-  geom_point(shape=1, position = "jitter") + #added shape = 1 for open circles and jitter to spread out points.
-  theme_classic()
-```
-
-
-```{r}
-#used to download tidyverse
-if (!require(tidyverse)) install.packages('tidyverse')
-library(tidyverse)
-
-
-#used to download gt
-if (!require(gt)) install.packages('gt')
-library(gt)
-```
-
-The variablss has information on all of the variables
-Opens a separate tab to view
-```{r}
-parlist$variables_00024 %>%
-  filter(table == "PARPAR_30min") %>%
-  view()
-```
-
-I don't need readTableNEON, but 
-
-```{r}
-par30 <- readTableNEON(
-  dataFile= parlist$PARPAR_30min, 
-  varFile= parlist$variables_00024)
-```
-
-
-
-```{r}
-apchem <- loadByProduct(dpID="DP1.20063.001", 
-                  site=c("PRLA","SUGG","TOOK"), 
-                  package="expanded", check.size=T)
-```
-
-```{r}
-names(apchem)
-```
-
-
-The above example was modified from this tutorial [Download and Explore NEON Data](https://www.neonscience.org/resources/learning-hub/tutorials/download-explore-neon-data). The tutorial includes additional information on how to save data locally, how to access remote sensing data (called AOP), and 
-
-
-
-[NEON Utilities Cheat Sheet](https://www.neonscience.org/sites/default/files/cheat-sheet-neonUtilities.pdf)
-
-```{r}
-stackByTable()
-```
-
-# Old
-
-#Other Data Sources
-
-## Breeding Bird Survey
-
-
-https://cran.r-project.org/web/packages/rdataretriever/vignettes/breed-bird-survey-analysis.html
-
-https://rpubs.com/clanescher/processingBBSdata
-
-## Other Old
-
-
-```{r}
-datalist <- loadByProduct(dpID="DP1.00024.001", 
-                         site="WREF", 
-                         startdate="2019-09",
-                         enddate="2019-11", check.size=F)
-```
-This shows the names of all of the data tables that were loaded.
-
-```{r}
-names(datalist)
-```
-Use the dollar sign to reference each data set inside the list
-```{r}
-datalist$PARPAR_30min
-```
-
-Optional but useful, you can rename a given table with a shorter name so that you can more easily reference it in your code.
-```{r}
-par30 <- datalist$PARPAR_30min 
-```
-
-
-
-```{r}
-par30 %>%
-  filter() %>%
-  ggplot(aes(x = startDateTime, y = PARMean))
-```
-The above code lays out the edges of the plot, but doesn't show any data. To display the data, you have to tell ggplot what kind of graph you want to display. In this case, we'll display a **line plot**.
-
-The function ggplot() has a number of modifying functions which are added using the plus sign (+) instead of the pipe (%>%). Otherwise it is similar. Just remember, once you move to ggplot at the end of your code, to use + instead of %>%.
-
-```{r}
-par30 %>%
-  filter() %>%
-  ggplot(aes(x = startDateTime, y = PARMean)) +
-  geom_line()
-```
-
-
-Adding theme_classic() will produce a cleaner looking figure.
-
-```{r}
-ggplot(aes(x = startDateTime, y = PARMean), data = par30) +
-  geom_line() +
-  theme_classic()
-```
-
-The table that begins with variables has more information on each of the variables, include a description and units. I have to use filter to select the same table I've been plotting, and then a second filter to select the variables in which I'm interested. In this case, I use %in% and c() to filter to a set of possible names, specifically the variables I'm using above.
-
-```{r}
-parlist$variables_00024 %>%
-  filter(table=="PARPAR_30min") %>%
-  filter(fieldName %in% c("PARMean","startDateTime"))
-```
-
-Reading the descriptions, I am going to give my axes titles names that can be more easily interpretted by a reader of the figure. The ggplot functions xlab() and ylab() allow me to change the labels of the x and y axis respectively. 
-
-```{r}
-ggplot(aes(x = startDateTime, y = PARMean), data = par30) +
-  geom_line() +
-  theme_classic() +
-  xlab("Sample Time") +
-  ylab("Photosynthetically Active Radiation")
-```
-
