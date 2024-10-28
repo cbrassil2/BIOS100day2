@@ -2,7 +2,9 @@
 title: "BIOS 100 - Your Project"
 author: "Your Name"
 date: "Fall 2024"
-output: html_document
+output: 
+  html_document:
+    df_print: tibble
 ---
 
 ```{r setup, include=FALSE}
