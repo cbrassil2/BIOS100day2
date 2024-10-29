@@ -47,6 +47,7 @@ To download the data, copy the Product ID also known as the unique identifier. I
 
 ```{r}
 #datalist = loadByProduct(dpID="DP1.10041.001", site="KONZ", check.size = F) #this function is from the package neonUtilities
+#saveRDS(datalist,file="NEONdatalist_KONZ")
 datalist <- readRDS(file="NEONdatalist_KONZ") #load a local copy that I save on GitHub
 ```
 
